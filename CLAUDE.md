@@ -1,11 +1,18 @@
-# Your harness
+# Weekform working rules
 
-This file is yours, and it arrives empty on purpose. The rules you hold the
-agent to are part of what gets marked, so they should be rules you decided on.
+Read the [C7 brief and spec](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/crits/07-anu-system/) and the repository before changing the app. Keep the course starter's Astro, Drizzle, SQLite, migration, Fly, and spec harness paths working.
 
-Nothing about the starter is recorded here. What the repo ships is explained
-where it lives --- `fly.toml`, the `Dockerfile`, the CI workflow and
-`spec/README.md` each say what they fix --- and the
-[course website](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/)
-publishes this deliverable's brief and spec. Read them before you plan or build;
-what the agent needs to carry from any of it is your call.
+## Product
+
+- Build one useful timetable slice: choose one meeting time for each of four courses and see a readable weekly plan.
+- Label the course and room data as illustrative. Do not imply a connection to ANU enrolment or the official timetable.
+- Keep class time, day, and location legible on desktop and phone. The expressive artwork must help course recognition without covering the schedule.
+- Treat the 3D scene as progressive enhancement. Keep the planner usable without WebGL or motion, and respect reduced-motion settings.
+
+## Data and checks
+
+- Read courses, sessions, and saved choices from SQLite. Send UI changes through an Astro endpoint and validate them before writing.
+- Change `src/lib/schema.ts` with a generated, committed Drizzle migration. Do not reset a deployed database or overwrite existing saved choices during seeding.
+- Preserve `/readme/`, the guestbook-derived notes and SSE route, and the course tests. Add contract tests for new flows.
+- Run `pnpm check` and `pnpm check:evidence` before shipping. Inspect the app at 1920×1080 and 390×844 and verify a saved class survives reload.
+- Commit each green checkpoint locally with a scoped, imperative subject. Do not push without the student's deliberate instruction.
