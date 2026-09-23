@@ -1,54 +1,21 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
-Written by you, for a reader: how you got from the brief to the harness and
-agentic workflow behind this submission. Markers read this file and follow its
-citations; they don't trawl the repo for evidence you didn't point at.
-
-This file is the shape; the course site's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-is the requirement, and its
-[word counts](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#word-counts)
-cover every deliverable.
-
 ## What I built
 
-A sentence or two. `README.md` is where the account of what the app is and what
-good means here lives; this file is how you got there.
+Weekform is a four-course ANU timetable concept. It lets someone choose one meeting time for each course and see the saved result in a weekly view. The courses and times are sample data, so the app is useful as a prototype without claiming to be the official timetable.
 
 ## How I got here
 
-The account of the process: how the work actually went, and how you knew the
-result was right. Tell it in whatever order makes it clear. A weekly prototype
-needs a paragraph or two; an assignment needs more.
+I asked the agent to read the [C7 brief](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/crits/07-anu-system/) and the repository before changing anything. The brief was marked draft when we read it. Its fixed spec called for a narrow ANU system slice, data that survives a reload, a live Fly URL, and a traceable process. The starter already had Astro, Drizzle, SQLite, migrations, Fly configuration, and a running-app test harness. That grounded the choice to keep the stack and focus on a timetable planner.
 
-Cite the record as you go, as links whose text is the commit hash or range and
-whose target is this repo's commit or compare URL, so a reader clicks straight
-to the evidence:
+Two parts of my prompt set the direction:
 
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
+> The core flow must work end to end and persist after a page reload.
 
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
+> Do not treat these four posters as isolated images.
 
-> the prompt, verbatim
+The first working checkpoint, [`d64d74c`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-u7663394/commit/d64d74c), added a course, session, and saved-choice schema with a migration. The UI posts a chosen time to an Astro endpoint. The backend checks that it belongs to the course and does not overlap another saved class, writes it to SQLite, then redirects to a fresh database-backed page. I kept the starter's message and live-event routes as shared week notes so its supplied plumbing check still had a purpose. I generated a desktop design reference and four course posters, then used their subjects and colours in the scroll scene, course choices, and timetable.
 
-Screenshots are welcome where one carries the point better than a sentence does.
-Commit the file to this repo and link it with a **relative** path, which is what
-makes it render on GitHub: `![alt text](docs/before.png)`. Images don't count
-towards the word count and don't replace the citation.
+The first full check found one accessibility error: a day label used an ARIA attribute on a plain div. I fixed it before the first commit. The built-app suite then passed 30 tests, including a new save, reload, and clash test. Browser inspection confirmed the 3D scene, the 1920×1080 grid, the 390×844 agenda, and a class choice surviving a phone reload. At an intermediate laptop width, the calendar was too narrow beside the chooser. [`073228d`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-u7663394/commit/073228d) records the switch to an agenda at that width and the project rules in `CLAUDE.md`. I then found and corrected missing agenda styling at that width during a second visual check.
 
-## Before you ship
-
-`pnpm check:evidence` verifies that this comment is gone, that your citations
-resolve to real commits, that a crit week's reflection entry is in
-`reflections/`, and that your `CLAUDE.md` is there. It checks that your account
-is traceable, not that it is good: that is the marker's call.
-
-Images aren't checked: unlike a citation whose SHA doesn't resolve, a broken
-image is visible the moment this file is rendered on GitHub.
+The app uses the starter's Dockerfile and Fly volume path for deployment. I have prepared and tested it locally; I have not deployed it or pushed these commits.
