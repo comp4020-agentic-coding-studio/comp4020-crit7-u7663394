@@ -1,53 +1,155 @@
 ---
-import { listMessages } from "../lib/db";
+import { getPlannerData, listMessages } from "../lib/db";
 import "../styles.css";
 
+const { courses, sessions, selections } = getPlannerData();
 const messages = listMessages();
+const selectedIds = new Set(selections.map((row) => row.sessionId));
+const planned = sessions.filter((session) => selectedIds.has(session.id));
+const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+const hours = Array.from({ length: 11 }, (_, i) => i + 8);
+const time = (minute: number) => `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
+const courseFor = (id: number) => courses.find((course) => course.id === id)!;
+const query = Astro.url.searchParams;
+const feedback = query.get("error") === "clash"
+  ? "That time overlaps a class already in your plan. Choose another option."
+  : query.has("error") ? "That class option could not be saved." : query.has("saved") ? "Your class choice was saved." : null;
 ---
-
 <!doctype html>
 <html lang="en-AU">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>COMP4020 prototype</title>
+    <meta name="theme-color" content="#f5f2eb" />
+    <meta name="description" content="Weekform is a visual sample ANU timetable planner. Choose class times, see your week, and keep your plan after a reload." />
+    <title>Weekform — an ANU timetable concept</title>
   </head>
   <body>
-    <nav aria-label="site">
-      <a href="/">Guestbook</a>
-      <a href="/readme/">About</a>
+    <a class="skip-link" href="#planner">Skip to timetable</a>
+    <nav class="site-nav" aria-label="Site navigation">
+      <a class="wordmark" href="#top" aria-label="Weekform, back to top">WEEK<span>FORM</span><i aria-hidden="true"></i></a>
+      <span class="nav-context">ANU timetable concept</span>
+      <div class="nav-links"><a href="#experience">Explore courses</a><a href="#planner">Plan your week</a><a href="/readme/">About</a></div>
     </nav>
-    <main>
-      <h1>Guestbook</h1>
-      <p>
-        A minimal full-stack starter: messages live in SQLite on the machine's
-        volume (state survives a reload and a redeploy), and new messages
-        appear in every open tab over a server-sent-events stream — open this
-        page twice and sign it in one. Replace all of this with your own
-        prototype.
-      </p>
-      <form method="post" action="/api/messages">
-        <label for="body">Leave a message</label>
-        <input id="body" name="body" required maxlength="500" />
-        <button>Sign</button>
-      </form>
-      <ul id="messages">
-        {messages.map((message) => <li>{message.body}</li>)}
-      </ul>
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="signal-dot"></span> A new view of your week <span class="eyebrow-index">/ 01</span></p>
+          <h1 id="hero-title">Make space for<br /><em>everything.</em></h1>
+          <p class="hero-intro">Choose a class time that works. See the whole week at once. Make a plan worth keeping.</p>
+          <div class="hero-actions"><a class="button button-dark" href="#planner">Open your timetable <span aria-hidden="true">↗</span></a><a class="text-link" href="#experience">Meet the courses <span aria-hidden="true">↓</span></a></div>
+          <p class="hero-footnote">A shared demo plan with four illustrative courses and class times.</p>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          {courses.map((course, i) => <div class={`hero-poster hero-poster-${i + 1}`}><img src={course.poster} alt="" width="1024" height="1536" /></div>)}
+          <div class="hero-orbit"></div><div class="hero-stamp">YOUR WEEK<br />IN VIEW</div>
+        </div>
+        <div class="hero-side-label" aria-hidden="true">SCROLL TO EXPLORE THE COURSE UNIVERSE — 2026</div>
+      </section>
+      <section class="section-intro" aria-labelledby="explore-title">
+        <p class="eyebrow">Four courses / one coherent week</p>
+        <h2 id="explore-title">Every course has<br />a point of view.</h2>
+        <p>Scroll through the four studies, then shape their meeting times into one workable plan.</p>
+      </section>
+      <section class="experience" id="experience" aria-label="Explore the four courses">
+        <div class="experience-stage" aria-hidden="true">
+          <canvas id="course-canvas"></canvas>
+          <div class="stage-fallback"><img src={courses[0].poster} alt="" width="1024" height="1536" /></div>
+          <div class="stage-index"><span id="stage-count">01</span><span class="stage-rule"></span>04</div>
+        </div>
+        <div class="experience-chapters">
+          {courses.map((course, i) => <article class="course-chapter" data-course-index={i}>
+            <div class="chapter-inner">
+              <span class="chapter-number">0{i + 1} / 04 <span>COURSE STUDY</span></span>
+              <img class="chapter-mobile-image" src={course.poster} alt={`${course.title} poster artwork`} width="1024" height="1536" loading="lazy" />
+              <p class="chapter-code">{course.code}</p>
+              <h3>{course.title}</h3>
+              <p>{course.description}</p>
+              <a href={`#course-${course.id}`}>Choose a time <span aria-hidden="true">↗</span></a>
+            </div>
+          </article>)}
+        </div>
+      </section>
+      <section class="transition" aria-label="Plan transition"><span>THE COURSES BECOME YOUR WEEK</span><p>From four different worlds to one clear view.</p><a href="#planner" aria-label="Go to timetable">↓</a></section>
+      <section class="planner" id="planner" aria-labelledby="planner-title">
+        <div class="planner-heading">
+          <div><p class="eyebrow"><span class="signal-dot"></span> The working timetable / Semester sample</p><h2 id="planner-title">Your week, composed.</h2><p>Pick one class time for each course. Every change is saved in SQLite and is here when you return.</p></div>
+          <div class="plan-summary" aria-label={`${planned.length} of ${courses.length} courses planned`}><strong>{String(planned.length).padStart(2, "0")}<span>/{String(courses.length).padStart(2, "0")}</span></strong><span>COURSES PLANNED</span></div>
+        </div>
+        {feedback && <p class:list={["feedback", { "feedback-error": query.has("error") }]} role="status">{feedback}</p>}
+        <div class="planner-layout">
+          <div class="calendar-area">
+            <div class="calendar-toolbar"><span>WEEKLY VIEW <span class="toolbar-spark">✳</span></span><span>{planned.length * 2} HOURS IN CLASS <span class="toolbar-divider">/</span> MON—FRI</span></div>
+            <div class="calendar-scroll" role="region" aria-label="Weekly timetable grid" tabindex="0">
+              <div class="calendar-grid">
+                <div class="time-heading">TIME</div>
+                {days.map((day) => <div class="day-heading">{day.slice(0, 3).toUpperCase()} <span>{day}</span></div>)}
+                <div class="time-rail">{hours.map((hour) => <span style={`top:${(hour - 8) * 64}px`}>{String(hour).padStart(2, "0")}:00</span>)}</div>
+                {days.map((day, dayIndex) => <div class="day-track" role="group" aria-label={day}>
+                  {planned.filter((session) => session.day === dayIndex).map((session) => {
+                    const course = courseFor(session.courseId);
+                    return <a class={`calendar-event theme-${course.id}`} href={`#course-${course.id}`} style={`top:${(session.startMinute - 480) / 60 * 64}px;height:${(session.endMinute - session.startMinute) / 60 * 64}px`}>
+                      <span class="event-code">{course.code}</span><strong>{course.title}</strong><span>{time(session.startMinute)}–{time(session.endMinute)}</span><small>{session.location}</small>
+                    </a>;
+                  })}
+                </div>)}
+              </div>
+            </div>
+            <div class="mobile-agenda" aria-label="Timetable by day">
+              {days.map((day, dayIndex) => <div class="agenda-day">
+                <h3>{day}</h3>
+                {planned.filter((session) => session.day === dayIndex).length ?
+                  planned.filter((session) => session.day === dayIndex).map((session) => {
+                    const course = courseFor(session.courseId);
+                    return <a class={`agenda-session theme-${course.id}`} href={`#course-${course.id}`}><span>{time(session.startMinute)}–{time(session.endMinute)}</span><strong>{course.title}</strong><small>{session.location}</small></a>;
+                  }) : <p>No classes planned</p>}
+              </div>)}
+            </div>
+          </div>
+          <aside class="course-options" aria-labelledby="choices-title">
+            <div class="options-header"><span>BUILD YOUR PLAN</span><h3 id="choices-title">Choose class times</h3><p>One meeting per course. Overlapping choices are blocked.</p></div>
+            {courses.map((course, i) => {
+              const options = sessions.filter((session) => session.courseId === course.id);
+              const selected = options.find((session) => selectedIds.has(session.id));
+              return <details class="course-choice" id={`course-${course.id}`} open={i === 0}>
+                <summary><img src={course.poster} alt="" width="1024" height="1536" loading="lazy" /><span class="choice-heading"><small>{course.code}</small><strong>{course.title}</strong><span>{selected ? `${days[selected.day]} · ${time(selected.startMinute)}` : "Choose a class"}</span></span><span class="choice-toggle" aria-hidden="true">+</span></summary>
+                <div class="choice-body">
+                  <img class="choice-poster" src={course.poster} alt={`${course.title} poster artwork`} width="1024" height="1536" loading="lazy" />
+                  <p>{course.description}</p>
+                  <div class="option-list">{options.map((option) => <form method="post" action="/api/plan">
+                    <input type="hidden" name="courseId" value={course.id} />
+                    <button class:list={["option-button", { selected: selectedIds.has(option.id) }]} type="submit" name="sessionId" value={option.id} aria-label={`Save ${course.title}, ${option.label}, ${days[option.day]} ${time(option.startMinute)} to ${time(option.endMinute)}`}>
+                      <span class="option-marker" aria-hidden="true"></span><span><strong>{option.label}</strong><small>{days[option.day]} · {time(option.startMinute)}–{time(option.endMinute)}<br />{option.location}</small></span>{selectedIds.has(option.id) && <span class="selected-label">SAVED</span>}
+                    </button>
+                  </form>)}</div>
+                </div>
+              </details>;
+            })}
+          </aside>
+        </div>
+        <p class="sample-disclaimer">This prototype uses illustrative courses, rooms and times. It is not connected to ANU enrolment or the official timetable.</p>
+      </section>
+      <section class="notes" id="notes" aria-labelledby="notes-title">
+        <div class="notes-intro"><p class="eyebrow">A little extra space</p><h2 id="notes-title">Notes for the week.</h2><p>Keep a reminder beside your timetable. Notes are shared in this demo and saved in the same database.</p></div>
+        <div class="notes-workspace">
+          <form method="post" action="/api/messages"><label for="body">Add a note</label><div class="note-input"><input id="body" name="body" required maxlength="500" placeholder="Something to remember…" /><button type="submit">Add note <span aria-hidden="true">↗</span></button></div></form>
+          <ul id="messages" aria-live="polite">{messages.map((message) => <li>{message.body}</li>)}</ul>
+        </div>
+      </section>
     </main>
+    <footer class="site-footer"><a class="wordmark" href="#top">WEEK<span>FORM</span><i aria-hidden="true"></i></a><span>An independent ANU timetable concept · Built for COMP4020 C7</span><a href="/readme/">How it works ↗</a></footer>
     <script>
-      // The live half of the demo: subscribe to the SSE stream and prepend
-      // messages as they arrive. The form itself needs none of this — its
-      // POST + redirect re-renders the submitting tab from SQLite; this
-      // stream is how every other tab finds out.
+      import "../scripts/scene";
       const list = document.querySelector("#messages");
-      const source = new EventSource("/api/events");
-      source.addEventListener("message", (event) => {
-        const message = JSON.parse(event.data);
-        const item = document.createElement("li");
-        item.textContent = message.body;
-        list?.prepend(item);
-      });
+      if (list && "EventSource" in window) {
+        const source = new EventSource("/api/events");
+        source.addEventListener("message", (event) => {
+          const message = JSON.parse((event as MessageEvent).data);
+          const item = document.createElement("li");
+          item.textContent = message.body;
+          list.prepend(item);
+        });
+      }
     </script>
   </body>
 </html>

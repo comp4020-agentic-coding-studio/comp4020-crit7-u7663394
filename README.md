@@ -1,18 +1,15 @@
-# Your prototype
+# Weekform
 
-<!-- TEMPLATE: this file is yours, and the deployed app publishes it in full at
-     /readme/ --- a visitor reads it before they touch the app, and so does the
-     marker. Replace everything in it, this comment included. -->
-
-What this is, in a paragraph: the thing, and what it's for.
+Weekform is a small, independent ANU timetable concept. A student sees four illustrative courses, chooses one meeting time for each, and sees the saved choices in a weekly view. The plan survives a reload because the browser posts each choice to an Astro backend, which validates it and writes it to SQLite. A shared notes area uses the starter's live update stream.
 
 ## What good looks like here
 
-Say what good means for this app: what you decided, what you read or looked at
-while deciding, and what you chose not to build. The rules that decision
-produced live in `CLAUDE.md` and the checks that protect it live in `spec/`;
-this is the argument they came from, so say which parts of good are enforced and
-which are judgement calls.
+A useful timetable should make class times easy to compare and should stop a choice that overlaps another saved class. The weekly view has to stay readable on a phone, where it becomes a day-by-day agenda. The four visual identities give each course a recognisable image and colour without hiding the timetable details. The scroll scene adds depth on larger screens; reduced motion and small screens show the course artwork as ordinary images.
 
-Images go in `public/` and are linked relatively --- `![alt](public/before.png)`
---- which renders on GitHub and at `/readme/` alike.
+The [C7 brief](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/crits/07-anu-system/) asks for a narrow ANU system slice with real persistence. The course starter already supplied Astro, Drizzle, SQLite migrations, Fly configuration, and a running-app test harness. Weekform keeps that stack and tests its new save-and-reload flow in `spec/planner.test.ts`.
+
+The courses, rooms, and times are illustrative. Weekform is not connected to ANU enrolment or the official timetable. The saved plan and notes are shared by everyone using this demo, rather than tied to an account.
+
+## Run it locally
+
+Run `pnpm install`, then `pnpm dev`. The database is created in `.data/app.db`; migrations run when the server starts. Run `pnpm check` for type checks and the built-app tests. Deployment uses the existing Dockerfile and Fly volume configuration, with `DATABASE_PATH=/data/app.db`.
