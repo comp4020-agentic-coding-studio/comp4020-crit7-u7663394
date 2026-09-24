@@ -76,7 +76,7 @@ const feedback = query.get("error") === "clash"
           <div><p class="eyebrow"><span class="signal-dot"></span> The working timetable / Semester sample</p><h2 id="planner-title">Your week, composed.</h2><p>Pick one class time for each course. Every change is saved in SQLite and is here when you return.</p></div>
           <div class="plan-summary" aria-label={`${planned.length} of ${courses.length} courses planned`}><strong>{String(planned.length).padStart(2, "0")}<span>/{String(courses.length).padStart(2, "0")}</span></strong><span>COURSES PLANNED</span></div>
         </div>
-        {feedback && <p class:list={["feedback", { "feedback-error": query.has("error") }]} role="status">{feedback}</p>}
+        <p id="planner-feedback" class:list={["feedback", { "feedback-error": query.has("error") }]} role="status" hidden={!feedback}>{feedback}</p>
         <div class="planner-layout">
           <div class="calendar-area">
             <div class="calendar-toolbar"><span>WEEKLY VIEW <span class="toolbar-spark">✳</span></span><span>{planned.length * 2} HOURS IN CLASS <span class="toolbar-divider">/</span> MON—FRI</span></div>
@@ -85,41 +85,41 @@ const feedback = query.get("error") === "clash"
                 <div class="time-heading">TIME</div>
                 {days.map((day) => <div class="day-heading">{day.slice(0, 3).toUpperCase()} <span>{day}</span></div>)}
                 <div class="time-rail">{hours.map((hour) => <span style={`top:${(hour - 8) * 64}px`}>{String(hour).padStart(2, "0")}:00</span>)}</div>
-                {days.map((day, dayIndex) => <div class="day-track" role="group" aria-label={day}>
+                {days.map((day, dayIndex) => <div class="day-track" role="group" aria-label={day} data-day={dayIndex}>
                   {planned.filter((session) => session.day === dayIndex).map((session) => {
                     const course = courseFor(session.courseId);
-                    return <a class={`calendar-event theme-${course.id}`} href={`#course-${course.id}`} style={`top:${(session.startMinute - 480) / 60 * 64}px;height:${(session.endMinute - session.startMinute) / 60 * 64}px`}>
-                      <span class="event-code">{course.code}</span><strong>{course.title}</strong><span>{time(session.startMinute)}–{time(session.endMinute)}</span><small>{session.location}</small>
+                    return <a class={`calendar-event theme-${course.id}`} data-course-id={course.id} href={`#course-${course.id}`} style={`top:${(session.startMinute - 480) / 60 * 64}px;height:${(session.endMinute - session.startMinute) / 60 * 64}px`}>
+                      <span class="event-code">{course.code}</span><strong>{course.title}</strong><span class="event-time">{time(session.startMinute)}–{time(session.endMinute)}</span><small class="event-location">{session.location}</small>
                     </a>;
                   })}
                 </div>)}
               </div>
             </div>
             <div class="mobile-agenda" aria-label="Timetable by day">
-              {days.map((day, dayIndex) => <div class="agenda-day">
+              {days.map((day, dayIndex) => <div class="agenda-day" data-day={dayIndex}>
                 <h3>{day}</h3>
                 {planned.filter((session) => session.day === dayIndex).length ?
                   planned.filter((session) => session.day === dayIndex).map((session) => {
                     const course = courseFor(session.courseId);
-                    return <a class={`agenda-session theme-${course.id}`} href={`#course-${course.id}`}><span>{time(session.startMinute)}–{time(session.endMinute)}</span><strong>{course.title}</strong><small>{session.location}</small></a>;
-                  }) : <p>No classes planned</p>}
+                    return <a class={`agenda-session theme-${course.id}`} data-course-id={course.id} data-start={session.startMinute} href={`#course-${course.id}`}><span class="agenda-time">{time(session.startMinute)}–{time(session.endMinute)}</span><strong>{course.title}</strong><small class="agenda-location">{session.location}</small></a>;
+                  }) : <p class="agenda-empty">No classes planned</p>}
               </div>)}
             </div>
           </div>
           <aside class="course-options" aria-labelledby="choices-title">
-            <div class="options-header"><span>BUILD YOUR PLAN</span><h3 id="choices-title">Choose class times</h3><p>One meeting per course. Overlapping choices are blocked.</p></div>
+            <div class="options-header"><span>BUILD YOUR PLAN</span><h3 id="choices-title">Choose class times</h3><p>One meeting per course. Overlapping choices are blocked.</p><p id="plan-live-status" class="inline-status" role="status" aria-live="polite"></p></div>
             {courses.map((course, i) => {
               const options = sessions.filter((session) => session.courseId === course.id);
               const selected = options.find((session) => selectedIds.has(session.id));
-              return <details class="course-choice" id={`course-${course.id}`} open={i === 0}>
-                <summary><img src={course.poster} alt="" width="1024" height="1536" loading="lazy" /><span class="choice-heading"><small>{course.code}</small><strong>{course.title}</strong><span>{selected ? `${days[selected.day]} · ${time(selected.startMinute)}` : "Choose a class"}</span></span><span class="choice-toggle" aria-hidden="true">+</span></summary>
+              return <details class="course-choice" id={`course-${course.id}`} data-course-id={course.id} open={i === 0}>
+                <summary><img src={course.poster} alt="" width="1024" height="1536" loading="lazy" /><span class="choice-heading"><small>{course.code}</small><strong>{course.title}</strong><span class="choice-current">{selected ? `${days[selected.day]} · ${time(selected.startMinute)}` : "Choose a class"}</span></span><span class="choice-toggle" aria-hidden="true">+</span></summary>
                 <div class="choice-body">
                   <img class="choice-poster" src={course.poster} alt={`${course.title} poster artwork`} width="1024" height="1536" loading="lazy" />
                   <p>{course.description}</p>
                   <div class="option-list">{options.map((option) => <form method="post" action="/api/plan">
                     <input type="hidden" name="courseId" value={course.id} />
-                    <button class:list={["option-button", { selected: selectedIds.has(option.id) }]} type="submit" name="sessionId" value={option.id} aria-label={`Save ${course.title}, ${option.label}, ${days[option.day]} ${time(option.startMinute)} to ${time(option.endMinute)}`}>
-                      <span class="option-marker" aria-hidden="true"></span><span><strong>{option.label}</strong><small>{days[option.day]} · {time(option.startMinute)}–{time(option.endMinute)}<br />{option.location}</small></span>{selectedIds.has(option.id) && <span class="selected-label">SAVED</span>}
+                    <button class:list={["option-button", { selected: selectedIds.has(option.id) }]} type="submit" name="sessionId" value={option.id} aria-pressed={selectedIds.has(option.id)} aria-label={`Save ${course.title}, ${option.label}, ${days[option.day]} ${time(option.startMinute)} to ${time(option.endMinute)}`}>
+                      <span class="option-marker" aria-hidden="true"></span><span><strong>{option.label}</strong><small>{days[option.day]} · {time(option.startMinute)}–{time(option.endMinute)}<br />{option.location}</small></span><span class="selected-label">SAVED</span>
                     </button>
                   </form>)}</div>
                 </div>
@@ -140,6 +140,7 @@ const feedback = query.get("error") === "clash"
     <footer class="site-footer"><a class="wordmark" href="#top">WEEK<span>FORM</span><i aria-hidden="true"></i></a><span>An independent ANU timetable concept · Built for COMP4020 C7</span><a href="/readme/">How it works ↗</a></footer>
     <script>
       import "../scripts/scene";
+      import "../scripts/planner";
       const list = document.querySelector("#messages");
       if (list && "EventSource" in window) {
         const source = new EventSource("/api/events");
