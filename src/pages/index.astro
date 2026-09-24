@@ -14,6 +14,7 @@ const query = Astro.url.searchParams;
 const feedback = query.get("error") === "clash"
   ? "That time overlaps a class already in your plan. Choose another option."
   : query.has("error") ? "That class option could not be saved." : query.has("saved") ? "Your class choice was saved." : null;
+const noteFeedback = query.get("note") === "updated" ? "Note saved." : query.get("note") === "deleted" ? "Note deleted." : query.has("note-error") ? "The note could not be saved. Please try again." : null;
 ---
 <!doctype html>
 <html lang="en-AU">
@@ -132,8 +133,18 @@ const feedback = query.get("error") === "clash"
       <section class="notes" id="notes" aria-labelledby="notes-title">
         <div class="notes-intro"><p class="eyebrow">A little extra space</p><h2 id="notes-title">Notes for the week.</h2><p>Keep a reminder beside your timetable. Notes are shared in this demo and saved in the same database.</p></div>
         <div class="notes-workspace">
-          <form method="post" action="/api/messages"><label for="body">Add a note</label><div class="note-input"><input id="body" name="body" required maxlength="500" placeholder="Something to remember…" /><button type="submit">Add note <span aria-hidden="true">↗</span></button></div></form>
-          <ul id="messages" aria-live="polite">{messages.map((message) => <li>{message.body}</li>)}</ul>
+          <form id="note-create-form" method="post" action="/api/messages"><label for="body">Add a note</label><div class="note-input"><input id="body" name="body" required maxlength="500" placeholder="Something to remember…" /><button type="submit">Add note <span aria-hidden="true">↗</span></button></div></form>
+          <p id="notes-status" class="note-status" role="status" aria-live="polite">{noteFeedback}</p>
+          <p id="notes-empty" class="notes-empty" hidden={messages.length > 0}>No notes yet. Add one above.</p>
+          <ul id="messages" aria-label="Saved notes">{messages.map((message) => <li class="note-item" data-note-id={message.id}>
+            <details><summary><span class="note-text">{message.body}</span><span class="note-toggle" aria-hidden="true">Edit ↗</span></summary>
+              <div class="note-controls">
+                <form class="note-update-form" method="post" action="/api/messages"><input type="hidden" name="intent" value="update" /><input type="hidden" name="id" value={message.id} /><label>Note text<textarea name="body" maxlength="500" required>{message.body}</textarea></label><button type="submit">Save changes</button></form>
+                <form class="note-delete-form" method="post" action="/api/messages"><input type="hidden" name="intent" value="delete" /><input type="hidden" name="id" value={message.id} /><button type="submit">Delete note</button></form>
+              </div>
+            </details>
+          </li>)}</ul>
+          <template id="note-template"><li class="note-item"><details><summary><span class="note-text"></span><span class="note-toggle" aria-hidden="true">Edit ↗</span></summary><div class="note-controls"><form class="note-update-form" method="post" action="/api/messages"><input type="hidden" name="intent" value="update" /><input type="hidden" name="id" /><label>Note text<textarea name="body" maxlength="500" required></textarea></label><button type="submit">Save changes</button></form><form class="note-delete-form" method="post" action="/api/messages"><input type="hidden" name="intent" value="delete" /><input type="hidden" name="id" /><button type="submit">Delete note</button></form></div></details></li></template>
         </div>
       </section>
     </main>
@@ -141,16 +152,7 @@ const feedback = query.get("error") === "clash"
     <script>
       import "../scripts/scene";
       import "../scripts/planner";
-      const list = document.querySelector("#messages");
-      if (list && "EventSource" in window) {
-        const source = new EventSource("/api/events");
-        source.addEventListener("message", (event) => {
-          const message = JSON.parse((event as MessageEvent).data);
-          const item = document.createElement("li");
-          item.textContent = message.body;
-          list.prepend(item);
-        });
-      }
+      import "../scripts/notes";
     </script>
   </body>
 </html>

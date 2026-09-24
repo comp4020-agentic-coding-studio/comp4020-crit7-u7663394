@@ -84,3 +84,11 @@ export function listMessages(): Message[] {
 export function addMessage(body: string): Message {
   return db.insert(messages).values({ body }).returning().get();
 }
+
+export function updateMessage(id: number, body: string): Message | undefined {
+  return db.update(messages).set({ body }).where(eq(messages.id, id)).returning().get();
+}
+
+export function deleteMessage(id: number): Message | undefined {
+  return db.delete(messages).where(eq(messages.id, id)).returning().get();
+}

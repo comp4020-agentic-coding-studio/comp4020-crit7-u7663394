@@ -9,6 +9,8 @@ import { bus } from "../../lib/events";
 // only when the client needs to push over the same connection.
 export const GET: APIRoute = () => {
   let onMessage: (message: Message) => void;
+  let onUpdate: (message: Message) => void;
+  let onDelete: (payload: { id: number }) => void;
   let heartbeat: ReturnType<typeof setInterval>;
 
   const stream = new ReadableStream<string>({
@@ -21,11 +23,21 @@ export const GET: APIRoute = () => {
       onMessage = (message) => {
         controller.enqueue(`data: ${JSON.stringify(message)}\n\n`);
       };
+      onUpdate = (message) => {
+        controller.enqueue(`event: note-updated\ndata: ${JSON.stringify(message)}\n\n`);
+      };
+      onDelete = (payload) => {
+        controller.enqueue(`event: note-deleted\ndata: ${JSON.stringify(payload)}\n\n`);
+      };
       bus.on("message", onMessage);
+      bus.on("message:update", onUpdate);
+      bus.on("message:delete", onDelete);
     },
     cancel() {
       clearInterval(heartbeat);
       bus.off("message", onMessage);
+      bus.off("message:update", onUpdate);
+      bus.off("message:delete", onDelete);
     },
   });
 
